@@ -1,0 +1,252 @@
+<!-- Modal -->
+<th:block th:fragment="login_modal" xmlns:th="http://www.w3.org/1999/xhtml">
+<div class="modal fade " id="exampleModal" tabindex="-1" role="dialog"
+     aria-labelledby="exampleModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Đăng nhập</h3>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row row-sparse">
+                    <div class="col-md-12">
+                        <form class="mb-1" id="loginForm">
+                            <label for="login_email">Email <span class="required">*</span></label>
+                            <input type="email" class="form-input form-wide mb-2" name="login_email" id="login_email">
+                            <br>
+                            <label for="login_password">Mật khẩu <span class="required">*</span></label>
+                            <input type="password" class="form-input form-wide mb-2" name="login_password"
+                                   id="login_password">
+                            <br>
+                            <div class="form-footer">
+                                <button type="submit" class="btn btn-primary btn-md">Đăng nhập</button>
+                                <button  data-toggle="modal" href="#exampleModalRegister" data-dismiss="modal" class="btn btn-secondary btn-md">Đăng ký</button>
+                            </div><!-- End .form-footer -->
+                        </form>
+                        <div class="btn-group">
+                            <a class="btn btn-social-login btn-md btn-gplus mb-1" href="#" onclick="showAlert('Google')">
+                                <i class="fab fa-google pt-1"></i><span>Google</span>
+                            </a>
+                            <a class="btn btn-social-login btn-md btn-facebook mb-1" href="#" onclick="showAlert('Facebook')">
+                                <i class="fab fa-facebook-f"></i><span>Facebook</span>
+                            </a>
+                        </div>
+                    </div><!-- End .col-md-6 -->
+                </div><!-- End .row -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade " id="exampleModalRegister" tabindex="-1" role="dialog"
+     aria-labelledby="exampleModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Đăng ký</h3>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row row-sparse">
+                    <div class="col-md-12">
+                        <form action="#" id="registerForm">
+                            <label for="register_full_name">Họ và tên <span class="required">*</span></label>
+                            <input type="text" class="form-input form-wide mb-2" name="register_full_name" id="register_full_name">
+                            <br>
+                            <label for="register_phone">Số điện thoại <span class="required">*</span></label>
+                            <input type="text" class="form-input form-wide mb-2" name="register_phone" id="register_phone">
+                            <br>
+                            <label for="register_email">Email <span class="required">*</span></label>
+                            <input type="email" class="form-input form-wide mb-2" name="register_email" id="register_email">
+                            <br>
+                            <label for="register_password">Mật khẩu <span class="required">*</span></label>
+                            <input type="password" class="form-input form-wide mb-2" name="register_password" id="register_password">
+                            <br>
+                            <label for="register_confirm_password">Nhập lại mật khẩu <span class="required">*</span></label>
+                            <input type="password" class="form-input form-wide mb-2" name="register_confirm_password" id="register_confirm_password">
+
+                            <div class="form-footer">
+                                <button type="submit" class="btn btn-primary btn-md">Đăng ký</button>
+                                <button  data-toggle="modal" href="#exampleModal" data-dismiss="modal" class="btn btn-secondary btn-md">Quay lại</button>
+                            </div><!-- End .form-footer -->
+                        </form>
+                    </div><!-- End .col-md-6 -->
+                </div><!-- End .row -->
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- Modal thông báo -->
+    <!-- Alert thông báo -->
+    <div id="socialAlert" class="alert-box">
+        <div class="alert-content">
+            <span id="alertMessage">Chức năng đăng nhập sẽ được phát triển sau. Vui lòng sử dụng đăng nhập thường!</span>
+            <button class="close-btn" onclick="closeAlert()">×</button>
+        </div>
+    </div>
+    <!-- CSS và JS -->
+    <style>
+        /* CSS cho alert thông báo */
+        .alert-box {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: none;
+            animation: slideIn 0.5s ease-out forwards;
+        }
+
+        .alert-content {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 15px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 300px;
+            border-left: 4px solid #007bff;
+        }
+
+        .alert-content span {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .alert-content .close-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: #555;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        .alert-content .close-btn:hover {
+            color: #000;
+        }
+
+        /* Animation cho alert */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* CSS cho nút social login */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-social-login {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        .btn-social-login i {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+
+        .btn-gplus {
+            background-color: #db4437;
+        }
+
+        .btn-gplus:hover {
+            background-color: #c1351e;
+        }
+
+        .btn-facebook {
+            background-color: #3b5998;
+        }
+
+        .btn-facebook:hover {
+            background-color: #2f4378;
+        }
+
+        /* CSS cho form và modal hiện có */
+        .modal-content {
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        /* Responsive */
+        @media (max-width: 500px) {
+            .alert-content {
+                max-width: 250px;
+                padding: 10px 15px;
+            }
+        }
+    </style>
+
+</th:block>
