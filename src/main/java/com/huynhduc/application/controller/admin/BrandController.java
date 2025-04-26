@@ -1,14 +1,17 @@
 package com.huynhduc.application.controller.admin;
 
+import com.github.javafaker.Faker;
 import com.huynhduc.application.entity.Brand;
 import com.huynhduc.application.entity.User;
 import com.huynhduc.application.model.mapper.BrandMapper;
 import com.huynhduc.application.model.request.CreateBrandRequest;
+import com.huynhduc.application.repository.BrandRepository;
 import com.huynhduc.application.security.CustomUserDetails;
 import com.huynhduc.application.service.BrandService;
 import com.huynhduc.application.service.ImageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -16,10 +19,13 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.sql.Timestamp;
 import java.util.List;
 
 @Controller
 public class BrandController {
+    @Autowired
+    private BrandRepository brandRepository ;
 
     @Autowired
     private BrandService brandService;
@@ -68,4 +74,25 @@ public class BrandController {
         Brand brand = brandService.getBrandById(id);
         return ResponseEntity.ok(brand);
     }
+    @GetMapping("/fake/brand")
+    public ResponseEntity<?>fakeBrand() {
+        for(int i = 0 ; i < 100000 ;i++){
+            generateFakeBrand();
+        }
+        return ResponseEntity.status(HttpStatus.OK).body("ok");
+    }
+    public Brand generateFakeBrand() {
+        Faker faker = new Faker();
+        Brand brand = new Brand();
+        brand.setName(faker.company().name() + " " + faker.number().randomNumber()); // tránh trùng
+        brand.setDescription(faker.lorem().sentence(10));
+        brand.setThumbnail("http://localhost:9000/resources/giay04.jpg");
+        brand.setStatus(true);
+        brand.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+        brand.setModifiedAt(new Timestamp(System.currentTimeMillis()));
+        this.brandRepository.save(brand);
+        return brand;
+    }
+
+
 }

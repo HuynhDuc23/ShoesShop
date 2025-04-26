@@ -1,4 +1,5 @@
 package com.huynhduc.application.service.impl;
+import com.huynhduc.application.entity.Category;
 import com.huynhduc.application.entity.Product;
 import com.huynhduc.application.service.ExcelExportService;
 import org.apache.poi.ss.usermodel.*;
@@ -7,54 +8,109 @@ import org.springframework.stereotype.Service;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 @Service
 public class ExcelExportServiceImpl implements ExcelExportService {
-    @Override
     public void exportProductItems(List<Product> products, HttpServletResponse response) throws IOException {
-        Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Danh sách sản phẩm");
-        // Tao tieu de cot
-        Row header = sheet.createRow(0);
-        String[] columns = {"STT", "Tên sản phẩm", "Nhãn hiệu", "Danh mục", "Giá nhập","Giá bán","Ngày tạo","Ngày sửa"};
-        for (int i = 0; i < columns.length; i++) {
-            Cell cell = ((Row) header).createCell(i);
-            cell.setCellValue(columns[i]);
+        if (products == null || products.isEmpty()) {
+            throw new IllegalArgumentException("Danh sách sản phẩm rỗng");
         }
 
+        try (XSSFWorkbook workbook = new XSSFWorkbook();
+             ServletOutputStream out = response.getOutputStream()) {
+            Sheet sheet = workbook.createSheet("Danh sách sản phẩm");
+
+            // Create header row
+            createHeaderRow(sheet, workbook);
+
+            // Populate product data
+            populateProductData(sheet, products, workbook);
+
+            // Auto-size columns
+            autoSizeColumns(sheet);
+
+            // Set response headers and write output
+            configureResponse(response);
+            workbook.write(out);
+        } catch (IOException e) {
+            throw new RuntimeException("Lỗi khi xuất file Excel: " + e.getMessage(), e);
+        }
+    }
+
+    private void createHeaderRow(Sheet sheet, XSSFWorkbook workbook) {
+        String[] columns = {"STT", "Tên sản phẩm", "Danh mục", "Giá nhập", "Giá bán", "Ngày tạo", "Ngày sửa"};
+        Row header = sheet.createRow(0);
+
+        CellStyle headerStyle = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setBold(true);
+        headerStyle.setFont(font);
+        headerStyle.setAlignment(HorizontalAlignment.CENTER);
+
+        for (int i = 0; i < columns.length; i++) {
+            Cell cell = header.createCell(i);
+            cell.setCellValue(columns[i]);
+            cell.setCellStyle(headerStyle);
+        }
+    }
+
+    private void populateProductData(Sheet sheet, List<Product> products, XSSFWorkbook workbook) {
         int rowNum = 1;
         int stt = 1;
-        CreationHelper createHelper = workbook.getCreationHelper();
+
         CellStyle dateCellStyle = workbook.createCellStyle();
-        dateCellStyle.setDataFormat(createHelper.createDataFormat().getFormat("dd/MM/yyyy HH:mm:ss"));
+        dateCellStyle.setDataFormat(workbook.getCreationHelper().createDataFormat().getFormat("dd/MM/yyyy HH:mm:ss"));
 
-        for (var product : products) {
+        for (Product product : products) {
             Row row = sheet.createRow(rowNum++);
-            row.createCell(0).setCellValue(stt++);
-            row.createCell(1).setCellValue(product.getName());
-            row.createCell(2).setCellValue(product.getBrand().getName());
-            row.createCell(3).setCellValue((product.getCategories().isEmpty() || product.getCategories().get(0).getName().isEmpty())
-                    ? "Rỗng"
-                    : product.getCategories().get(0).getName());
-            row.createCell(4).setCellValue(product.getPrice());
-            row.createCell(5).setCellValue(product.getSalePrice());
-
-            Cell createdAtCell = row.createCell(6);
-            createdAtCell.setCellValue(product.getCreatedAt());
-            createdAtCell.setCellStyle(dateCellStyle);
-
-            Cell modifiedAtCell = row.createCell(7);
-            modifiedAtCell.setCellValue(product.getModifiedAt());
-            modifiedAtCell.setCellStyle(dateCellStyle);
+            fillProductRow(row, product, stt++, dateCellStyle);
         }
-        // Xuất file về client
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=danhsachsanpham.xlsx");
+    }
 
-        ServletOutputStream out = response.getOutputStream();
-        workbook.write(out);
-        workbook.close();
-        out.close();
+    private void fillProductRow(Row row, Product product, int stt, CellStyle dateCellStyle) {
+        row.createCell(0).setCellValue(stt);
+        row.createCell(1).setCellValue(getSafeString(product.getName(), "N/A"));
+        row.createCell(2).setCellValue(getCategoryName(product));
+        row.createCell(3).setCellValue(getSafeLong(product.getPrice(), 0L));
+        row.createCell(4).setCellValue(getSafeLong(product.getSalePrice(), 0L));
+
+        Cell createdAtCell = row.createCell(5);
+        createdAtCell.setCellValue(product.getCreatedAt());
+        createdAtCell.setCellStyle(dateCellStyle);
+
+        Cell modifiedAtCell = row.createCell(6);
+        modifiedAtCell.setCellValue(product.getModifiedAt());
+        modifiedAtCell.setCellStyle(dateCellStyle);
+    }
+
+    private String getCategoryName(Product product) {
+        if (product.getCategories() == null || product.getCategories().isEmpty()) {
+            return "Rỗng";
+        }
+        Category firstCategory = product.getCategories().get(0);
+        return firstCategory != null && ((Category) firstCategory).getName() != null ? firstCategory.getName() : "Rỗng";
+    }
+
+    private String getSafeString(String value, String defaultValue) {
+        return value != null ? value : defaultValue;
+    }
+
+    private long getSafeLong(Long value, long defaultValue) {
+        return value != null ? value : defaultValue;
+    }
+
+    private void autoSizeColumns(Sheet sheet) {
+        for (int i = 0; i < 7; i++) { // 7 columns
+            sheet.autoSizeColumn(i);
+        }
+    }
+
+    private void configureResponse(HttpServletResponse response) {
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        String fileName = "DanhSachSanPham_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx";
+        response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
     }
 }

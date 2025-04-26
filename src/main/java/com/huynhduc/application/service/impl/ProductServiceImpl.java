@@ -1,6 +1,7 @@
 package com.huynhduc.application.service.impl;
 
 import com.huynhduc.application.elasticsearch.ProductDocument;
+import com.huynhduc.application.elasticsearch.ProductDocumentSearch;
 import com.huynhduc.application.entity.*;
 import com.huynhduc.application.exception.BadRequestException;
 import com.huynhduc.application.exception.InternalServerException;
@@ -12,32 +13,39 @@ import com.huynhduc.application.model.dto.ShortProductInfoDTO;
 import com.huynhduc.application.model.mapper.ProductMapper;
 import com.huynhduc.application.model.request.*;
 import com.huynhduc.application.repository.*;
+import com.huynhduc.application.service.BrandService;
+import com.huynhduc.application.service.CategoryService;
 import com.huynhduc.application.service.ProductService;
 import com.huynhduc.application.service.PromotionService;
 import com.huynhduc.application.service.minio.MinioService;
 import com.huynhduc.application.utils.PageUtil;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.huynhduc.application.constant.Contant.*;
 
 @Component
 public class ProductServiceImpl implements ProductService {
+    @Autowired
+    private CategoryService categoryService ;
+
+    @Autowired
+    private BrandService brandService ;
+    @Autowired
+    private ElasticsearchService elasticsearchService ;
     @Autowired
     private MinioService minioService ;
 
@@ -81,6 +89,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value="productList",allEntries = true)
     public Product createProduct(CreateProductRequest createProductRequest) {
         // Kiểm tra có danh mục
         if (createProductRequest.getCategoryIds().isEmpty()) {
@@ -117,9 +126,9 @@ public class ProductServiceImpl implements ProductService {
         product.setTotalSold(0);
         product.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         product.setModifiedAt(new Timestamp(System.currentTimeMillis()));
+
         try {
             productRepository.save(product);
-            productSearchRepository.deleteAll();
         } catch (Exception ex) {
             throw new InternalServerException("Lỗi khi thêm sản phẩm");
         }
@@ -129,6 +138,7 @@ public class ProductServiceImpl implements ProductService {
 
 
     @Override
+    @CacheEvict(value="productList",allEntries = true)
     public void updateProduct(CreateProductRequest createProductRequest, String id) {
         //Kiểm tra sản phẩm có tồn tại
         Optional<Product> product = productRepository.findById(id);
@@ -154,29 +164,40 @@ public class ProductServiceImpl implements ProductService {
            data.add(file);
         }
         result.setImages(data);
+        Product dataNew = null ;
         try {
-            productRepository.save(result);
+           dataNew =  productRepository.save(result);
         } catch (Exception e) {
             throw new InternalServerException("Có lỗi khi sửa sản phẩm!");
         }
         // ✅ Đồng bộ với Elasticsearch
         try {
-            ProductDocument doc = new ProductDocument(
-                    result.getId(),
-                    result.getName(),
-                    result.getSlug(),
-                    result.getPrice(),
-                    result.getView(),
-                    result.getImages(),
-                    result.getTotalSold()
-            );
 
-            productSearchRepository.save(doc); // Lưu lại vào Elasticsearch
+
+            ProductDocumentSearch doc = new ProductDocumentSearch();
+            doc.setId(result.getId());
+            doc.setBrandName(result.getBrand().getName());
+            doc.setName(result.getName());
+            doc.setStatus(result.getStatus());
+            doc.setSalePrice(result.getSalePrice());
+            doc.setPrice(result.getPrice());
+            doc.setDescription(result.getDescription());
+            doc.setBrandName(this.brandService.getBrandById(createProductRequest.getBrandId()).getName());
+            List<String> urlImage = new ArrayList<>(result.getImages());
+            doc.setImages(urlImage);
+            // lấy ra tùng Id gửi lên
+            List<String> nameCategory = new ArrayList<>();
+            for(var idCategory : createProductRequest.getCategoryIds()){
+                Category category =  this.categoryRepository.findById(idCategory.longValue()).get();
+                nameCategory.add(category.getName());
+            }
+            doc.setCategoryNames(nameCategory);
+            System.out.println(nameCategory.get(0)+"-------------------");
+            elasticsearchService.updateProduct(doc);
         } catch (Exception e) {
             System.err.println("Lỗi khi đồng bộ dữ liệu với Elasticsearch: " + e.getMessage());
         }
     }
-
     @Override
     public Product getProductById(String id) {
         Optional<Product> product = productRepository.findById(id);
@@ -187,14 +208,19 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @CacheEvict(value="productList",allEntries = true)
     public void deleteProduct(String[] ids) {
         for (String id : ids) {
-            productSearchRepository.deleteById(id);
+            // Xóa khỏi Elasticsearch
+            for(String idP : ids){
+                this.elasticsearchService.deleteProduct(id);
+            }
             productRepository.deleteById(id);
         }
     }
 
     @Override
+    @CacheEvict(value="productList",allEntries = true)
     public void deleteProductById(String id) {
         // Check product exist
         Optional<Product> rs = productRepository.findById(id);
@@ -212,8 +238,10 @@ public class ProductServiceImpl implements ProductService {
             // Delete product size
             productSizeRepository.deleteByProductId(id);
             productRepository.deleteById(id);
+            // xoá trong elasticsearch
+            this.elasticsearchService.deleteProduct(id);
             // ✅ Xóa trong Elasticsearch
-            productSearchRepository.deleteById(id);
+//            productSearchRepository.deleteById(id);
         } catch (Exception ex) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             throw new InternalServerException("Lỗi khi xóa sản phẩm");
@@ -221,23 +249,28 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Cacheable(value = "productList",key = "'all_product_best_sell'")
     public List<ProductInfoDTO> getListBestSellProducts() {
         List<ProductInfoDTO> productInfoDTOS = productRepository.getListBestSellProducts(LIMIT_PRODUCT_SELL);
         return checkPublicPromotion(productInfoDTOS);
     }
+    // caching
 
     @Override
+    @Cacheable(value = "productList",key = "'all_product'")
     public List<ProductInfoDTO> getListNewProducts() {
         List<ProductInfoDTO> productInfoDTOS = productRepository.getListNewProducts(LIMIT_PRODUCT_NEW);
         return checkPublicPromotion(productInfoDTOS);
 
     }
-
+    // caching
+    @Cacheable(value = "productList",key = "'all_product_view'")
     @Override
     public List<ProductInfoDTO> getListViewProducts() {
         List<ProductInfoDTO> productInfoDTOS = productRepository.getListViewProducts(LIMIT_PRODUCT_VIEW);
         return checkPublicPromotion(productInfoDTOS);
     }
+    //caching
 
     @Override
     public DetailProductInfoDTO getDetailProductById(String id) {
@@ -459,7 +492,7 @@ public class ProductServiceImpl implements ProductService {
                             dto.getPromotionPrice()
                     )).toList();
 
-            productSearchRepository.saveAll(docs); // Lưu vào Elasticsearch
+//            productSearchRepository.saveAll(docs); // Lưu vào Elasticsearch
 
             dtos = products;
             return new PageableDTO(checkPublicPromotion(dtos),
@@ -511,7 +544,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<Product> getAllProduct() {
-        return productRepository.findAll();
+        return productRepository.findAll50();
     }
 
     @Override
@@ -563,7 +596,6 @@ public class ProductServiceImpl implements ProductService {
             // Lưu thuộc tính vào database
             productVariantAttributeRepository.saveAll(attributes);
         }
-
         return savedProduct;
     }
 

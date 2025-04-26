@@ -13,7 +13,6 @@ import lombok.Setter;
 public class PageUtil {
     public int limit;
     public int page;
-
     public PageUtil(int limit, int page) {
         this.limit = limit;
         if (page < 1) {
@@ -22,7 +21,6 @@ public class PageUtil {
             this.page = page;
         }
     }
-
     public int calculateOffset() {
         return (page - 1) * limit;
     }

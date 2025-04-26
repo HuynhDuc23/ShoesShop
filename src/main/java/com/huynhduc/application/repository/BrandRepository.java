@@ -23,4 +23,7 @@ public interface BrandRepository extends JpaRepository<Brand, Long> {
     @Query(name = "getProductOrderBrands",nativeQuery = true)
     List<ChartDTO> getProductOrderBrands();
 
+    @Query(value = "select * from brand where status  = 1 order by created_at asc limit 5 ;",nativeQuery = true)
+    List<Brand> getBrand();
+
 }

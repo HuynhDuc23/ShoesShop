@@ -9,6 +9,7 @@ import com.huynhduc.application.model.dto.PageableDTO;
 import com.huynhduc.application.model.dto.ProductInfoDTO;
 import com.huynhduc.application.model.request.CreateOrderRequest;
 import com.huynhduc.application.model.request.FilterProductRequest;
+import com.huynhduc.application.repository.ProductRepository;
 import com.huynhduc.application.security.CustomUserDetails;
 import com.huynhduc.application.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,15 +23,19 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import static com.huynhduc.application.constant.Contant.*;
 
 @Controller
 public class HomeController {
+
+    @Autowired
+    private ProductRepository productRepository ;
     @Autowired
     private VNPayService vnPayService ;
 
@@ -284,6 +289,46 @@ public class HomeController {
     @GetMapping("doi-hang")
     public String doiHang(){
         return "shop/doi-hang";
+    }
+
+    // fake data product
+    @GetMapping("/fake/product")
+    public void generateProducts() {
+        List<Product> products = new ArrayList<>();
+
+        for (int i = 1; i <= 5000000; i++) {
+            Product p = new Product();
+            p.setId(UUID.randomUUID().toString());
+            p.setName("Product " + i);
+            p.setSalePrice((long) ThreadLocalRandom.current().nextDouble(100000.0, 10000000.0));
+            p.setSlug("product-" + i);
+            p.setTotalSold(ThreadLocalRandom.current().nextInt(1000, 2000));
+            p.setStatus(1);
+            p.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
+
+            ArrayList<String> imageUrls = new ArrayList<>(Arrays.asList(
+                    "http://localhost:9000/resources/giay01-1.jpg",
+                    "http://localhost:9000/resources/giay01-2.jpg",
+                    "http://localhost:9000/resources/giay01-3.jpg",
+                    "http://localhost:9000/resources/giay01.jpg"
+            ));
+            p.setImages(imageUrls);
+
+            products.add(p);
+
+            // Insert theo batch 1000
+            if (i % 1000 == 0) {
+                productRepository.saveAll(products);
+                products.clear();
+                System.out.println("Đã insert tới: " + i);
+            }
+        }
+
+        // Insert phần còn lại (nếu có)
+        if (!products.isEmpty()) {
+            productRepository.saveAll(products);
+            System.out.println("Insert phần còn lại: " + products.size());
+        }
     }
 
 }

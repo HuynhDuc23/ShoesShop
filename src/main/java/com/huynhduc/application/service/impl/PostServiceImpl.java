@@ -21,19 +21,17 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
-
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
-
 import static com.huynhduc.application.constant.Contant.*;
-
 @Component
 public class PostServiceImpl implements PostService {
     @Autowired
     private PostRepository postRepository;
 
     @Override
+    @Cacheable(value = "postList",key = "'post_admin_list'")
     public PageableDTO adminGetListPost(String title, String status, int page) {
         PageUtil pageUtil = new PageUtil(LIMIT_POST, page);
 
@@ -147,6 +145,7 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @CacheEvict(value = "postList",key = "'admin_posts'")
     public Page<Post> adminGetListPosts(String title, String status, Integer page) {
         page--;
         if (page < 0) {
@@ -157,12 +156,13 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    @Cacheable(value = "postList", key = "'all_posts'")
+    @Cacheable(value = "postList", key = "'all_posts_late'")
     public List<Post> getLatesPost() {
         return postRepository.getLatesPosts(PUBLIC_POST, LIMIT_POST_NEW);
     }
 
     @Override
+//    @Cacheable(value = "postList", key = "'all_posts_list_page'")
     public Page<Post> getListPost(int page) {
         page--;
         if (page < 0) {
@@ -173,12 +173,13 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+//    @Cacheable(value = "postList", key = "'all_posts_id'")
     public List<Post> getLatestPostsNotId(long id) {
         return postRepository.getLatestPostsNotId(PUBLIC_POST,id,LIMIT_POST_RELATED);
     }
 
     @Override
-    @Cacheable(value = "postList", key = "all_posts")
+    @Cacheable(value = "postList", key = "'all_posts'")
     public long getCountPost() {
         return postRepository.count();
     }

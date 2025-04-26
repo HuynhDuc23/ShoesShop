@@ -205,6 +205,43 @@
             </div><!-- End .featured-proucts -->
         </div>
     </section>
+    <section class="brands-section">
+        <div class="container">
+            <h2 class="section-title heading-border ls-20 border-0">Nhãn hiệu nổi bật</h2>
+            <div class="products-slider custom-products owl-carousel owl-theme nav-outer show-nav-hover nav-image-center" data-owl-options="{
+            'dots': false,
+            'nav': true,
+            'responsive': {
+                '576': {
+                    'items': 2
+                },
+                '768': {
+                    'items': 3
+                },
+                '992': {
+                    'items': 4
+                },
+                '1200': {
+                    'items': 5
+                }
+            }
+        }">
+                <th:block th:each="brand : ${brands}">
+                    <div class="product-default">
+                        <figure>
+                            <img th:src="@{${brand.thumbnail} ?: '/shop/images/default-brand.png'}" alt="Brand Thumbnail">
+                            <div class="label-group">
+                                <div class="product-label label-hot">HOT</div>
+                            </div>
+                        </figure>
+                        <div class="product-details">
+                            <h3 class="product-title" th:text="${brand.name}"></h3>
+                        </div><!-- End .product-details -->
+                    </div><!-- End .product-default -->
+                </th:block>
+            </div><!-- End .products-slider -->
+        </div><!-- End .container -->
+    </section><!-- End .brands-section -->
 
     <section class="featured-products-section">
         <div class="container">
@@ -252,50 +289,50 @@
         </div>
     </section>
 
-<!--    <section class="feature-boxes-container">-->
-<!--        <div class="container">-->
-<!--            <div class="row">-->
-<!--                <div class="col-md-4">-->
-<!--                    <div class="feature-box px-sm-5 feature-box-simple text-center">-->
-<!--                        <i class="icon-earphones-alt"></i>-->
+    <section class="feature-boxes-container">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="feature-box px-sm-5 feature-box-simple text-center">
+                        <i class="icon-earphones-alt"></i>
 
-<!--                        <div class="feature-box-content">-->
-<!--                            <h3 class="m-b-1">Customer Support</h3>-->
-<!--                            <h5 class="m-b-3">You Won't Be Alone</h5>-->
+                        <div class="feature-box-content">
+                            <h3 class="m-b-1">Customer Support</h3>
+                            <h5 class="m-b-3">You Won't Be Alone</h5>
 
-<!--                            <p>We really care about you and your website as much as you do. Purchasing Porto or any other theme from us you get 100% free support.</p>-->
-<!--                        </div>&lt;!&ndash; End .feature-box-content &ndash;&gt;-->
-<!--                    </div>&lt;!&ndash; End .feature-box &ndash;&gt;-->
-<!--                </div>&lt;!&ndash; End .col-md-4 &ndash;&gt;-->
+                            <p>We really care about you and your website as much as you do. Purchasing Porto or any other theme from us you get 100% free support.</p>
+                        </div><!-- End .feature-box-content -->
+                    </div><!-- End .feature-box -->
+                </div><!-- End .col-md-4 -->
 
-<!--                <div class="col-md-4">-->
-<!--                    <div class="feature-box px-sm-5 feature-box-simple text-center">-->
-<!--                        <i class="icon-credit-card"></i>-->
+                <div class="col-md-4">
+                    <div class="feature-box px-sm-5 feature-box-simple text-center">
+                        <i class="icon-credit-card"></i>
 
-<!--                        <div class="feature-box-content">-->
-<!--                            <h3 class="m-b-1">Fully Customizable</h3>-->
-<!--                            <h5 class="m-b-3">Tons Of Options</h5>-->
+                        <div class="feature-box-content">
+                            <h3 class="m-b-1">Fully Customizable</h3>
+                            <h5 class="m-b-3">Tons Of Options</h5>
 
-<!--                            <p>With Porto you can customize the layout, colors and styles within only a few minutes. Start creating an amazing website right now!</p>-->
-<!--                        </div>&lt;!&ndash; End .feature-box-content &ndash;&gt;-->
-<!--                    </div>&lt;!&ndash; End .feature-box &ndash;&gt;-->
-<!--                </div>&lt;!&ndash; End .col-md-4 &ndash;&gt;-->
+                            <p>With Porto you can customize the layout, colors and styles within only a few minutes. Start creating an amazing website right now!</p>
+                        </div><!-- End .feature-box-content -->
+                    </div><!-- End .feature-box -->
+                </div><!-- End .col-md-4 -->
 
-<!--                <div class="col-md-4">-->
-<!--                    <div class="feature-box px-sm-5 feature-box-simple text-center">-->
-<!--                        <i class="icon-action-undo"></i>-->
+                <div class="col-md-4">
+                    <div class="feature-box px-sm-5 feature-box-simple text-center">
+                        <i class="icon-action-undo"></i>
 
-<!--                        <div class="feature-box-content">-->
-<!--                            <h3 class="m-b-1">Powerful Admin</h3>-->
-<!--                            <h5 class="m-b-3">Made To Help You</h5>-->
+                        <div class="feature-box-content">
+                            <h3 class="m-b-1">Powerful Admin</h3>
+                            <h5 class="m-b-3">Made To Help You</h5>
 
-<!--                            <p>Porto has very powerful admin features to help customer to build their own shop in minutes without any special skills in web development.</p>-->
-<!--                        </div>&lt;!&ndash; End .feature-box-content &ndash;&gt;-->
-<!--                    </div>&lt;!&ndash; End .feature-box &ndash;&gt;-->
-<!--                </div>&lt;!&ndash; End .col-md-4 &ndash;&gt;-->
-<!--            </div>&lt;!&ndash; End .row &ndash;&gt;-->
-<!--        </div>&lt;!&ndash; End .container&ndash;&gt;-->
-<!--    </section>&lt;!&ndash; End .feature-boxes-container &ndash;&gt;-->
+                            <p>Porto has very powerful admin features to help customer to build their own shop in minutes without any special skills in web development.</p>
+                        </div><!-- End .feature-box-content -->
+                    </div><!-- End .feature-box -->
+                </div><!-- End .col-md-4 -->
+            </div><!-- End .row -->
+        </div><!-- End .container-->
+    </section><!-- End .feature-boxes-container -->
 
     <section class="blog-section">
         <div class="container">
@@ -342,13 +379,13 @@
             </div>
             <hr class="mt-0 m-b-5">
         </div>
-        <df-messenger
-                intent="WELCOME"
-                chat-title="IA-Shoes-TTTN"
-                agent-id="62c478bb-1c05-45d7-a44f-decfecd8cff7"
-                language-code="en"
-        ></df-messenger>
     </section>
+    <df-messenger
+            intent="WELCOME"
+            chat-title="IA-Shoes-TTTN"
+            agent-id="62c478bb-1c05-45d7-a44f-decfecd8cff7"
+            language-code="en"
+    ></df-messenger>
 </main><!-- End .main -->
 <th:block id="js-resources">
     <script>

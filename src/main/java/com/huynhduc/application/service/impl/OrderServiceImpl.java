@@ -61,7 +61,7 @@ public class OrderServiceImpl implements OrderService {
         }
         int limit = 10;
         Pageable pageable = PageRequest.of(page, limit, Sort.by("created_at").descending());
-        return orderRepository.adminGetListOrder(id, name, phone, status, product, pageable);
+        return orderRepository.adminGetListOrder(id, name, phone, status,product,pageable);
     }
 
     @Override

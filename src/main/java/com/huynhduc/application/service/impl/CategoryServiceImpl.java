@@ -50,9 +50,14 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    public List<Category> findAllByIds(ArrayList<Long> categoryIds) {
+        return this.categoryRepository.findAllByIdIn(categoryIds);
+    }
+
+    @Override
     @Cacheable(value = "categoryList", key = "'all_categories_list'")
     public List<Category> getListCategories() {
-        return categoryRepository.findAll();
+        return categoryRepository.findCategory();
     }
 
     @Override

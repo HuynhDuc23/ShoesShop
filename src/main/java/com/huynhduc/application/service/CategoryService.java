@@ -7,6 +7,7 @@ import com.huynhduc.application.model.request.CreateCategoryRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -27,4 +28,6 @@ public interface CategoryService {
 
     //Đếm số danh mục
     long getCountCategories();
+
+    List<Category> findAllByIds(ArrayList<Long> categoryIds);
 }

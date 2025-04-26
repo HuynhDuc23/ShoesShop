@@ -201,11 +201,11 @@ public class Product {
     @Column(name = "modified_at")
     private Timestamp modifiedAt;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "brand_id")
     private Brand brand;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "product_category",
             joinColumns =@JoinColumn(name = "product_id"),

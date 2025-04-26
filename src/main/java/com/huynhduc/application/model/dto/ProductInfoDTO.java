@@ -15,6 +15,9 @@ public class ProductInfoDTO {
     private int totalSold;
     private long promotionPrice;
 
+    public ProductInfoDTO() {
+    }
+
     public ProductInfoDTO(String id, String name, String slug, long price, int views, String images, int totalSold) {
         this.id = id;
         this.name = name;

@@ -2,13 +2,17 @@ package com.huynhduc.application.controller.admin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.huynhduc.application.elasticsearch.ProductDocumentSearch;
 import com.huynhduc.application.entity.*;
 import com.huynhduc.application.model.request.CreateProductRequest;
 import com.huynhduc.application.model.request.CreateSizeCountRequest;
 import com.huynhduc.application.model.request.UpdateFeedBackRequest;
+import com.huynhduc.application.repository.CategoryRepository;
 import com.huynhduc.application.repository.ProductSearchRepository;
 import com.huynhduc.application.security.CustomUserDetails;
 import com.huynhduc.application.service.*;
+import com.huynhduc.application.service.impl.ElasticsearchService;
+import com.huynhduc.application.service.minio.MinioService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -18,7 +22,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
@@ -34,6 +37,11 @@ import static com.huynhduc.application.constant.Contant.SIZE_VN;
 @Slf4j
 @Controller
 public class ProductController {
+
+    @Autowired
+    private MinioService minioService;
+    @Autowired
+    private ElasticsearchService elasticsearchService ;
     @Autowired
     private ExcelExportService excelExportService ;
 
@@ -53,6 +61,9 @@ public class ProductController {
 
     @Autowired
     private ImageService imageService;
+
+    @Autowired
+    CategoryRepository categoryRepository ;
 
     @GetMapping("/admin/products")
     public String homePages(Model model,
@@ -146,22 +157,45 @@ public class ProductController {
         // Parse JSON
         ObjectMapper objectMapper = new ObjectMapper();
         CreateProductRequest productRequest = objectMapper.readValue(productJson, CreateProductRequest.class);
-        ArrayList arrayListFile = new ArrayList(Arrays.asList(images));
+        ArrayList<MultipartFile> arrayListFile = new ArrayList(Arrays.asList(images));
         productRequest.setImages(arrayListFile);
         Product product = productService.createProduct(productRequest);
+        // luu vao elactic search
+        ProductDocumentSearch productDocumentSearch = new ProductDocumentSearch();
+        productDocumentSearch.setId(product.getId());
+        productDocumentSearch.setName(product.getName());
+        productDocumentSearch.setDescription(product.getDescription());
+        productDocumentSearch.setBrandName(this.brandService.getBrandById(productRequest.getBrandId()).getName());
+        List<String> nameCategory = new ArrayList<>();
+        List<Integer> idCategory = new ArrayList<>();
+        for(var idCate : productRequest.getCategoryIds()){
+            Category category =  this.categoryRepository.findById(Integer.toUnsignedLong(idCate)).get();
+            nameCategory.add(category.getName());
+        }
+        productDocumentSearch.setCategoryNames(nameCategory);
+        productDocumentSearch.setPrice(product.getPrice());
+        productDocumentSearch.setSalePrice(product.getSalePrice());
+        productDocumentSearch.setStatus(product.getStatus());
+        // luu images trong els
+        ArrayList<String> imageUrls = new ArrayList<>();
+        for(MultipartFile file : arrayListFile){
+            String url = this.minioService.uploadFile(file);
+            imageUrls.add(url);
+        }
+        productDocumentSearch.setImages(imageUrls);
+        elasticsearchService.indexProduct(productDocumentSearch);
         return ResponseEntity.ok(product);
 }
 
     @PatchMapping("/api/admin/products/{id}")
     public ResponseEntity<Object> updateProduct(@Valid @RequestBody CreateProductRequest createProductRequest, @PathVariable String id) {
         productService.updateProduct(createProductRequest, id);
+        // cap nhat trong els
         return ResponseEntity.ok("Sửa sản phẩm thành công!");
     }
     @DeleteMapping("/api/admin/products")
     public ResponseEntity<Object> deleteProduct(@RequestBody String[] ids) {
         productService.deleteProduct(ids);
-        // Xóa khỏi Elasticsearch
-        //productSearchRepository.deleteById(ids[0]);
         return ResponseEntity.ok("Xóa sản phẩm thành công!");
     }
 
@@ -190,4 +224,5 @@ public class ProductController {
         List<Product> result = productService.getAllProduct();
         excelExportService.exportProductItems(result,response);
     }
+
 }

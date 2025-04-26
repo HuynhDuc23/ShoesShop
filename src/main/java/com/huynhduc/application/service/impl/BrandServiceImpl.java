@@ -42,7 +42,7 @@ public class BrandServiceImpl implements BrandService {
     @Cacheable(value="brandList",key = "'all_brands'")
     public List<Brand> getListBrand() {
         System.out.println("⛏ Gọi DB: getListBrand()");
-        return brandRepository.findAll();
+        return brandRepository.getBrand();
     }
     @Override
     @CacheEvict(value="brandList",allEntries = true)
@@ -98,7 +98,6 @@ public class BrandServiceImpl implements BrandService {
     }
 
     @Override
-    @Cacheable(value = "brandList", key = "'brand_' + #id")
     public Brand getBrandById(long id) {
         Optional<Brand> brand = brandRepository.findById(id);
         if (brand.isEmpty()) {

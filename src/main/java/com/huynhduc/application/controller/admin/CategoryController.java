@@ -4,19 +4,24 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.huynhduc.application.entity.Category;
 import com.huynhduc.application.model.mapper.CategoryMapper;
 import com.huynhduc.application.model.request.CreateCategoryRequest;
+import com.huynhduc.application.repository.CategoryRepository;
 import com.huynhduc.application.service.CategoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.sql.Timestamp;
 
 @Controller
 public class CategoryController {
+    @Autowired
+    private CategoryRepository categoryRepository;
     @Autowired
     private CategoryService categoryService;
 
@@ -73,5 +78,23 @@ public class CategoryController {
     public ResponseEntity<Object> updateOrderCategory(@RequestBody int[] ids){
         categoryService.updateOrderCategory(ids);
         return ResponseEntity.ok("Thay đổi thứ tự thành công!");
+    }
+    @GetMapping("/fake/category")
+    public ResponseEntity<?> fakeCategory(){
+        for (long i = 1; i <= 10000000; i++) {
+            createFakeCategory(i);
+        }
+        return ResponseEntity.status(HttpStatus.OK).body("ok");
+    }
+    private void createFakeCategory(long i) {
+        Category category = new Category();
+        category.setName("Category " + i);
+        category.setSlug("category-" + i);
+        category.setOrder((int) i);
+        category.setStatus(true);
+        category.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+        category.setModifiedAt(new Timestamp(System.currentTimeMillis()));
+
+        categoryRepository.save(category);
     }
 }

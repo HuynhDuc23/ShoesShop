@@ -21,8 +21,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 @Configuration
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
-    @Autowired
-    private CustomOAuth2UserService customOAuth2UserService;
 
     @Autowired
     private UserService userService ;
@@ -53,10 +51,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     public AuthenticationManager authenticationManagerBean() throws Exception{
         return super.authenticationManagerBean();
     }
-    @Bean
-    public AuthenticationSuccessHandler customSuccessHandler(UserService userService) {
-        return new CustomOAuth2SuccessHandler(userService);
-    }
 
 
     @Override
@@ -68,14 +62,11 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .disable()
                 .authorizeRequests()
                 .antMatchers("/api/orders", "/tai-khoan", "/tai-khoan/**", "/api/change-password", "/api/update-profile").authenticated()
-//                .antMatchers("/admin/**","/api/admin/**").hasRole("ADMIN")
+               .antMatchers("/admin/**","/api/admin/**").hasRole("ADMIN")
                 .anyRequest().permitAll()
                 .and()
-                .oauth2Login()
-                .successHandler(customSuccessHandler(userService)) // Chuyển hướng về trang chủ sau khi đăng nhập thành công
-                .userInfoEndpoint(user->user.userService(customOAuth2UserService))// Sử dụng Google OAuth2 Login
-                .failureUrl("/login?error=true") // Nếu login thất bại, chuyển hướng về trang login và thông báo lỗi
-                .and()
+//                .oauth2Login()// Chuyển hướng về trang chủ sau khi đăng nhập thành công
+//                .failureUrl("/login?error=true") // Nếu login thất bại, chuyển hướng về trang login và thông báo lỗi
                 .logout()
                 .logoutUrl("/api/logout")
                 .logoutSuccessUrl("/")
