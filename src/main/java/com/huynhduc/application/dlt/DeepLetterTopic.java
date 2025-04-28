@@ -20,7 +20,7 @@ public class DeepLetterTopic {
             // Cố gắng xử lý lại message
             // Nếu không thành công, lưu vào DB hoặc thực hiện các hành động khác
             String email = userRepository.findById(request.getUserId()).get().getEmail();
-            this.mailService.sendMailSimple(email, "Thông báo đơn hàng", "Đơn hàng của bạn không thành công , vui lòng thử lại sau");
+            this.mailService.sendMailSimple(email, "Thông báo đơn hàng", "Sản phẩm này đã hết , hãy quay lại sau một vài ngày nữa nhé !");
         } catch (Exception e) {
             System.out.println("❌ Lưu message lỗi vào DB: {}" + request + e);
         }

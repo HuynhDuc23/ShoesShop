@@ -8,7 +8,7 @@ import com.huynhduc.application.model.request.CreateProductRequest;
 import com.huynhduc.application.model.request.CreateSizeCountRequest;
 import com.huynhduc.application.model.request.UpdateFeedBackRequest;
 import com.huynhduc.application.repository.CategoryRepository;
-import com.huynhduc.application.repository.ProductSearchRepository;
+//import com.huynhduc.application.repository.ProductSearchRepository;
 import com.huynhduc.application.security.CustomUserDetails;
 import com.huynhduc.application.service.*;
 import com.huynhduc.application.service.impl.ElasticsearchService;
@@ -28,6 +28,8 @@ import javax.validation.Valid;
 import java.awt.*;
 import java.io.*;
 import java.nio.file.Files;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -45,8 +47,8 @@ public class ProductController {
     @Autowired
     private ExcelExportService excelExportService ;
 
-    @Autowired
-    private ProductSearchRepository productSearchRepository ;
+//    @Autowired
+//    private ProductSearchRepository productSearchRepository ;
     @Autowired
     private ServletContext context;
 
@@ -166,6 +168,9 @@ public class ProductController {
         productDocumentSearch.setName(product.getName());
         productDocumentSearch.setDescription(product.getDescription());
         productDocumentSearch.setBrandName(this.brandService.getBrandById(productRequest.getBrandId()).getName());
+        productDocumentSearch.setSlug(product.getSlug());
+        productDocumentSearch.setViews(10);
+        productDocumentSearch.setTotalSold((int) product.getTotalSold());
         List<String> nameCategory = new ArrayList<>();
         List<Integer> idCategory = new ArrayList<>();
         for(var idCate : productRequest.getCategoryIds()){
@@ -218,11 +223,24 @@ public class ProductController {
 
         return ResponseEntity.ok("Cập nhật thành công");
     }
-
     @GetMapping("/api/products/export/excel")
     public void exportProductDataToExcelFile(HttpServletResponse response) throws IOException {
         List<Product> result = productService.getAllProduct();
-        excelExportService.exportProductItems(result,response);
+
+        if (result == null || result.isEmpty()) {
+            response.setContentType("text/plain;charset=UTF-8");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().write("Danh sách sản phẩm rỗng!");
+            return;
+        }
+
+        // Cấu hình response trước
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        String fileName = "DanhSachSanPham_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx";
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+
+        // Sau đó mới gọi service để ghi file
+        excelExportService.exportProductItems(result, response);
     }
 
 }

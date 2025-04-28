@@ -1,6 +1,5 @@
 package com.huynhduc.application.service.impl;
 
-import com.huynhduc.application.elasticsearch.ProductDocument;
 import com.huynhduc.application.elasticsearch.ProductDocumentSearch;
 import com.huynhduc.application.entity.*;
 import com.huynhduc.application.exception.BadRequestException;
@@ -20,13 +19,16 @@ import com.huynhduc.application.service.PromotionService;
 import com.huynhduc.application.service.minio.MinioService;
 import com.huynhduc.application.utils.PageUtil;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
+import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,14 +45,18 @@ public class ProductServiceImpl implements ProductService {
     private CategoryService categoryService ;
 
     @Autowired
+    private ElasticsearchRestTemplate elasticsearchTemplate;
+
+
+    @Autowired
     private BrandService brandService ;
     @Autowired
     private ElasticsearchService elasticsearchService ;
     @Autowired
     private MinioService minioService ;
 
-    @Autowired
-    private ProductSearchRepository productSearchRepository;
+//    @Autowired
+//    private ProductSearchRepository productSearchRepository;
 
     @Autowired
     private ProductRepository productRepository;
@@ -455,51 +461,53 @@ public class ProductServiceImpl implements ProductService {
 
         return new PageableDTO(checkPublicPromotion(products), totalPages, page);
     }
+    @Override
     public PageableDTO searchProductInES(String keyword, Integer page) {
         if (keyword == null) keyword = "";
-        // Loại bỏ tất cả khoảng trắng (bao gồm cả đầu, cuối và giữa các từ)
-        keyword = keyword.replaceAll("\\s+", "").trim();
+        keyword = keyword.trim();
         if (page == null || page < 1) page = 1;
+
         Pageable pageable = PageRequest.of(page - 1, LIMIT_PRODUCT_SEARCH);
+
         if (keyword.isEmpty()) {
-            return new PageableDTO(Collections.emptyList(), 0, page); // Trả về danh sách rỗng và tổng trang = 0
+            return new PageableDTO(Collections.emptyList(), 0, page);
         }
-        // Tìm kiếm trong Elasticsearch
-        Page<ProductDocument> resultPage = productSearchRepository
-                .findByNameContainingIgnoreCase(keyword,pageable);
+
+        // 🔥 Tìm kiếm trong Elasticsearch theo nhiều trường
+        Query searchQuery = new NativeSearchQueryBuilder()
+                .withQuery(QueryBuilders.multiMatchQuery(keyword, "name", "brandName", "categoryNames"))
+                .withPageable(pageable)
+                .build();
+
+        SearchHits<ProductDocumentSearch> searchHits = elasticsearchTemplate.search(searchQuery, ProductDocumentSearch.class);
+
+// Convert SearchHits → List<ProductDocumentSearch>
+        List<ProductDocumentSearch> products = searchHits.getSearchHits()
+                .stream()
+                .map(SearchHit::getContent)
+                .collect(Collectors.toList());
+
+// Sau đó tự tạo Page<ProductDocumentSearch> nếu bạn cần:
+        Page<ProductDocumentSearch> resultPage = new PageImpl<>(products, pageable, searchHits.getTotalHits());
+
 
         List<ProductInfoDTO> dtos;
 
-        // Nếu không có kết quả từ Elasticsearch, fallback sang MySQL
         if (resultPage.isEmpty()) {
-            System.out.println("SQL");
+            System.out.println("🔵 SQL fallback");
 
-            // Lấy dữ liệu từ MySQL
+            // Fallback MySQL
             PageUtil pageInfo = new PageUtil(LIMIT_PRODUCT_SEARCH, page);
-            List<ProductInfoDTO> products = productRepository.searchProductByKeyword(
+            List<ProductInfoDTO> product = productRepository.searchProductByKeyword(
                     keyword, LIMIT_PRODUCT_SEARCH, pageInfo.calculateOffset());
 
-            // Lưu dữ liệu vào Elasticsearch
-            List<ProductDocument> docs = products.stream()
-                    .map(dto -> new ProductDocument(
-                            dto.getId(),
-                            dto.getName(),
-                            dto.getSlug(),
-                            dto.getPrice(),
-                            dto.getViews(),
-                            dto.getImages(),
-                            dto.getTotalSold(),
-                            dto.getPromotionPrice()
-                    )).toList();
-
-//            productSearchRepository.saveAll(docs); // Lưu vào Elasticsearch
-
-            dtos = products;
+            dtos = product;
             return new PageableDTO(checkPublicPromotion(dtos),
                     pageInfo.calculateTotalPage(productRepository.countProductByKeyword(keyword)), page);
         }
-        // Nếu có kết quả từ Elasticsearch
-        System.out.println("ELK");
+
+        System.out.println("🟢 Elasticsearch OK");
+
         dtos = resultPage.getContent().stream()
                 .map(doc -> new ProductInfoDTO(
                         doc.getId(),
@@ -507,13 +515,13 @@ public class ProductServiceImpl implements ProductService {
                         doc.getSlug(),
                         doc.getPrice(),
                         doc.getViews(),
-                        doc.getImages(),
+                        doc.getImages().get(0),
                         doc.getTotalSold()
-                )).toList();
+                ))
+                .toList();
 
         return new PageableDTO(checkPublicPromotion(dtos), resultPage.getTotalPages(), page);
     }
-
 
     @Override
     public Promotion checkPromotion(String code) {
@@ -544,7 +552,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<Product> getAllProduct() {
-        return productRepository.findAll50();
+        return productRepository.findAll();
     }
 
     @Override
@@ -578,10 +586,8 @@ public class ProductServiceImpl implements ProductService {
             productVariant.setProduct(savedProduct);
             productVariant.setPrice(variantRequest.getPrice());
             productVariant.setStockQuantity(variantRequest.getStockQuantity());
-
             // Lưu biến thể sản phẩm
             ProductVariant savedVariant = productVariantRepository.save(productVariant);
-
             // Lưu thuộc tính của biến thể
             List<ProductVariantAttribute> attributes = variantRequest.getAttributes().stream().map(attrReq -> {
                 ProductAttribute attribute = productAttributeRepository.findById(attrReq.getAttributeId())

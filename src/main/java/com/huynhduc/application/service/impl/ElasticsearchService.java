@@ -24,7 +24,7 @@ public class ElasticsearchService {
 
     private final RestHighLevelClient client;
     private final ObjectMapper objectMapper;
-    private static final String INDEX = "products";
+    private static final String INDEX = "products_search";
     public void indexProduct(ProductDocumentSearch product) {
         try {
             IndexRequest request = new IndexRequest(INDEX)
